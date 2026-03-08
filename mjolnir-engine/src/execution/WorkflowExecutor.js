@@ -1,24 +1,29 @@
-/**
- * Mjolnir Workflow Executor (DAG Traversal)
- * Why: Standardized logic for executing JSON-based visual workflows.
- */
+const NodeRegistry = require('../nodes/Registry');
+const ReportingBridge = require('../reporting/ReportingBridge');
+
 class WorkflowExecutor {
   async run(dag) {
     const { nodes, edges } = dag;
-    console.log(`[Mjolnir] Executing DAG with ${nodes.length} nodes.`);
-    
-    // Simple topological sort / execution logic
     const results = {};
-    for (const node of nodes) {
-      results[node.id] = await this.executeNode(node, results);
-    }
-    return results;
-  }
+    const startTime = Date.now();
 
-  async executeNode(node, previousResults) {
-    console.log(`[Mjolnir] Executing Node: ${node.data.label} (${node.type})`);
-    // Placeholder for actual node logic (HTTP, SQL, LLM, etc.)
-    return { status: 'success', output: 'Node output' };
+    try {
+      // Very simple execution loop (linear)
+      for (const node of nodes) {
+        const nodeType = NodeRegistry[node.type];
+        if (nodeType) {
+          results[node.id] = await nodeType.execute(node, results);
+        }
+      }
+      
+      const duration = Date.now() - startTime;
+      await ReportingBridge.logExecution(dag.id, 'success', duration);
+      return results;
+    } catch (error) {
+      console.error("[Mjolnir] Workflow failed:", error);
+      await ReportingBridge.logExecution(dag.id, 'error', Date.now() - startTime);
+      throw error;
+    }
   }
 }
 

@@ -1,26 +1,38 @@
 /**
  * Mjolnir Node Registry
- * Why: Standardizes the inputs/outputs for all enterprise connectors.
+ * Why: Defines all available nodes and their logic.
  */
+const axios = require('axios');
+
 const NodeRegistry = {
-  'webhook-trigger': {
-    type: 'trigger',
-    outputs: ['body', 'headers', 'query'],
+  'trigger': {
+    execute: async (data) => data
   },
-  'sfdc-search': {
-    type: 'connector',
-    inputs: ['query'],
-    outputs: ['records'],
+  'llm': {
+    execute: async (node, prevResults) => {
+      console.log(`[Mjolnir] Executing LLM Node: ${node.data.label}`);
+      // Future: Call Gungnir Brain /api/chat
+      return { response: "AI analyzed output for: " + node.data.prompt };
+    }
   },
-  'slack-notify': {
-    type: 'connector',
-    inputs: ['message', 'channel'],
-    outputs: ['status'],
+  'sfdc-connector': {
+    execute: async (node, prevResults) => {
+      console.log(`[Mjolnir] Executing Salesforce Connector`);
+      const response = await axios.post('http://valkyrie-connectors:8003/connect/salesforce/account', {
+        instance_url: node.data.instance_url,
+        account_id: node.data.account_id
+      });
+      return response.data;
+    }
   },
-  'ai-agent': {
-    type: 'agent',
-    inputs: ['prompt', 'context'],
-    outputs: ['response', 'next_action'],
+  'postgres-connector': {
+    execute: async (node, prevResults) => {
+      const response = await axios.post('http://valkyrie-connectors:8003/connect/postgres/query', {
+        sql: node.data.sql,
+        config: node.data.config
+      });
+      return response.data;
+    }
   }
 };
 

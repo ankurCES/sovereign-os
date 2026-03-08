@@ -1,25 +1,27 @@
 """
 Yggdrasil Analytics - The Enterprise Dashboard Backend
-Why: Aggregates data from multiple sources (Postgres, Snowflake, S3) for the Bifrost Portal.
+Why: Serves dynamic metrics and ECharts data for the Sovereign Portal.
 """
 from fastapi import FastAPI
 from typing import List, Dict
+import random
 
 app = FastAPI(title="Yggdrasil Analytics API")
 
-@app.get("/analytics/summary")
+@app.get("/api/dashboard/summary")
 async def get_summary():
     return [
-        {"title": "Total Revenue (SFDC)", "value": ",450,000", "change": "+12.4%", "color": "blue"},
-        {"title": "Active IoT Devices", "value": "1,284", "change": "-2.1%", "color": "orange"},
-        {"title": "Agentic Flow Success", "value": "98.2%", "change": "+0.5%", "color": "green"}
+        {"title": "Total Revenue (SFDC)", "value": ".4M", "trend": "+12.4%", "color": "border-blue-500"},
+        {"title": "Active IoT Devices", "value": "1,284", "trend": "-2.1%", "color": "border-orange-500"},
+        {"title": "Agentic Flow Success", "value": "98.2%", "trend": "+0.5%", "color": "border-emerald-500"}
     ]
 
-@app.get("/analytics/revenue-trends")
-async def get_revenue_trends():
+@app.get("/api/dashboard/chart-data")
+async def get_chart_data():
     return {
-        "dates": ["2026-03-01", "2026-03-02", "2026-03-03", "2026-03-04", "2026-03-05", "2026-03-06", "2026-03-07"],
-        "values": [120, 150, 180, 140, 210, 250, 300]
+        "dates": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+        "workflows": [random.randint(100, 300) for _ in range(7)],
+        "tokens": [random.randint(1000, 5000) for _ in range(7)]
     }
 
 if __name__ == "__main__":

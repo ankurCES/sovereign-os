@@ -71,6 +71,16 @@ services:
     depends_on:
       - db
 
+  # Valkyrie Connectors: The Imperial Channels
+  valkyrie-connectors:
+    build: ./valkyrie-connectors
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.connectors.rule=PathPrefix('/api/connect')"
+      - "traefik.http.services.connectors.loadbalancer.server.port=8003"
+    networks:
+      - sovereign-net
+
   # Shared Database
   db:
     image: postgres:16-alpine
