@@ -1,0 +1,97 @@
+version: '3.8'
+
+services:
+  # API Gateway: Traefik for unified routing
+  gateway:
+    image: traefik:v2.10
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+    ports:
+      - "80:80"
+      - "8080:8080" # Traefik Dashboard
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    networks:
+      - sovereign-net
+
+  # UI Shell (SvelteKit)
+  bifrost-portal:
+    build: ./bifrost-portal
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ui.rule=PathPrefix('/')"
+      - "traefik.http.services.ui.loadbalancer.server.port=5173"
+    networks:
+      - sovereign-net
+    depends_on:
+      - gungnir-brain
+
+  # Agentic Backend (Python/FastAPI)
+  gungnir-brain:
+    build: ./gungnir-brain
+    environment:
+      - DATABASE_URL=postgresql://odin:spear@db:5432/sovereign
+      - REDIS_URL=redis://redis:6379
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.brain.rule=PathPrefix('/api/chat')"
+      - "traefik.http.services.brain.loadbalancer.server.port=8000"
+    networks:
+      - sovereign-net
+    depends_on:
+      - db
+      - redis
+
+  # Workflow Engine (Node.js/TypeScript)
+  mjolnir-engine:
+    build: ./mjolnir-engine
+    environment:
+      - DATABASE_URL=postgresql://odin:spear@db:5432/sovereign
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.engine.rule=PathPrefix('/api/workflow')"
+      - "traefik.http.services.engine.loadbalancer.server.port=8004"
+    networks:
+      - sovereign-net
+    depends_on:
+      - db
+
+  # BI Dashboard Backend (Python/FastAPI)
+  yggdrasil-analytics:
+    build: ./yggdrasil-analytics
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.analytics.rule=PathPrefix('/api/dashboard')"
+      - "traefik.http.services.analytics.loadbalancer.server.port=8005"
+    networks:
+      - sovereign-net
+    depends_on:
+      - db
+
+  # Shared Database
+  db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=odin
+      - POSTGRES_PASSWORD=spear
+      - POSTGRES_DB=sovereign
+    volumes:
+      - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - sovereign-net
+
+  redis:
+    image: redis:alpine
+    networks:
+      - sovereign-net
+
+networks:
+  sovereign-net:
+    driver: bridge
+
+volumes:
+  postgres_data:

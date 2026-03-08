@@ -1,0 +1,91 @@
+services:
+  gungnir-core:
+    build: ./gungnir-core
+    ports:
+      - "8000:8000"
+    environment:
+      - QDRANT_HOST=qdrant
+      - LAKEFS_ENDPOINT=http://lakefs:8000
+    networks:
+      - gungnir-net
+    depends_on:
+      - qdrant
+
+  mjolnir-fabric:
+    build: ./mjolnir-fabric
+    environment:
+      - QDRANT_HOST=qdrant
+    networks:
+      - gungnir-net
+    depends_on:
+      - qdrant
+
+  bifrost-gate:
+    build: ./bifrost-gate
+    ports:
+      - "8001:8001"
+    environment:
+      - GUNGNIR_CORE_URL=http://gungnir-core:8000
+    networks:
+      - gungnir-net
+    depends_on:
+      - gungnir-core
+
+  valkyrie-integrations:
+    build: ./valkyrie-integrations
+    ports:
+      - "8002:8002"
+    networks:
+      - gungnir-net
+
+  valkyrie-connectors:
+    build: ./valkyrie-connectors
+    ports:
+      - "8003:8003"
+    environment:
+      - POSTGRES_URL=postgresql://odin:spear@postgres:5432/gungnir
+      - MONGO_URL=mongodb://mongo:27017
+      - MQTT_BROKER=mosquitto
+    networks:
+      - gungnir-net
+    depends_on:
+      - postgres
+      - mongo
+      - mosquitto
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=odin
+      - POSTGRES_PASSWORD=spear
+      - POSTGRES_DB=gungnir
+    networks:
+      - gungnir-net
+
+  mongo:
+    image: mongo:latest
+    networks:
+      - gungnir-net
+
+  mosquitto:
+    image: eclipse-mosquitto:latest
+    ports:
+      - "1883:1883"
+    networks:
+      - gungnir-net
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+    networks:
+      - gungnir-net
+    volumes:
+      - qdrant_storage:/qdrant/storage
+
+networks:
+  gungnir-net:
+    driver: bridge
+
+volumes:
+  qdrant_storage:
