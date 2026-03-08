@@ -1,0 +1,7 @@
+sqlalchemy
+psycopg2-binary
+pymongo
+paho-mqtt
+fastapi
+uvicorn
+python-dotenv
